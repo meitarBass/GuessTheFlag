@@ -18,6 +18,16 @@ struct ContentView: View {
     @State private var score = 0
     
     @State private var question_asked = 0
+    
+    struct FlagImage: View {
+        var image: String
+        
+        var body: some View {
+            Image(image)
+                .renderingMode(.original)
+                .shadow(radius: 5.0)
+        }
+    }
 
     
     var body: some View {
@@ -48,9 +58,7 @@ struct ContentView: View {
                         Button {
                             flagTapped(number)
                         } label: {
-                            Image(countries[number])
-                                .renderingMode(.original)
-                                .shadow(radius: 5.0)
+                            FlagImage(image: countries[number])
                         }
                     }
                 }.frame(maxWidth: .infinity)
