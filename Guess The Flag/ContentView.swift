@@ -7,6 +7,27 @@
 
 import SwiftUI
 
+struct CornerRotateModifier: ViewModifier {
+    let amount: Double
+    let anchor: UnitPoint
+
+    func body(content: Content) -> some View {
+        content
+            .rotationEffect(.degrees(amount), anchor: anchor)
+            .clipped()
+    }
+}
+
+
+extension AnyTransition {
+    static var pivot: AnyTransition {
+        .modifier(
+            active: CornerRotateModifier(amount: -90, anchor: .topLeading),
+            identity: CornerRotateModifier(amount: 0, anchor: .topLeading)
+        )
+    }
+}
+
 struct ContentView: View {
     
     
@@ -18,6 +39,13 @@ struct ContentView: View {
     @State private var score = 0
     
     @State private var question_asked = 0
+    
+    // Properties for animating the chosen flag
+     @State private var animateCorrect = 0.0
+     @State private var animateOpacity = 1.0
+     @State private var besidesTheCorrect = false
+     @State private var besidesTheWrong = false
+     @State private var selectedFlag = 0
     
     struct FlagImage: View {
         var image: String
@@ -56,10 +84,23 @@ struct ContentView: View {
                     
                     ForEach(0..<3) { number in
                         Button {
-                            flagTapped(number)
+                            self.selectedFlag = number
+                            self.flagTapped(number)
                         } label: {
                             FlagImage(image: countries[number])
                         }
+                        // Animate the flag when the user tap the correct one:
+                        // Rotate the correct flag
+                        .rotation3DEffect(.degrees(number == self.correctAnswer ? self.animateCorrect : 0), axis: (x: 0, y: 1, z: 0))
+                        // Reduce opacity of the other flags to 25%
+                        .opacity(number != self.correctAnswer && self.besidesTheCorrect ? self.animateOpacity : 1)
+                        
+                        // Animate the flag when the user tap the wrong one:
+                        // Create a red background to the wrong flag
+                        .background(self.besidesTheWrong && self.selectedFlag == number ? Capsule(style: .circular).fill(Color.red).blur(radius: 30) : Capsule(style: .circular).fill(Color.clear).blur(radius: 0))
+                        // Reduce opacity of the other flags to 25% (including the correct one)
+                        .opacity(self.besidesTheWrong && self.selectedFlag != number ? self.animateOpacity : 1)
+                        
                     }
                 }.frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
@@ -85,19 +126,35 @@ struct ContentView: View {
     }
     
     func flagTapped(_ number: Int) {
-        question_asked  = question_asked + 1
         if number == correctAnswer {
-            scoreTitle = "Correct"
-            score = score + 1
+            scoreTitle = "Correct!"
+            
+            self.score += 1
+            
+            // Create animation for the correct answer
+            withAnimation {
+                self.animateCorrect += 360
+                self.animateOpacity = 0.25
+                self.besidesTheCorrect = true
+            }
         } else {
-            scoreTitle = "Wrong! that's the flag of \(countries[number])"
+            scoreTitle = "Wrong!"
+            
+            // Create animation for the wrong answer
+            withAnimation {
+                self.animateOpacity = 0.25
+                self.besidesTheWrong = true
+            }
         }
         showingScore = true
     }
     
     func askQuestion() {
-        countries.shuffle()
-        correctAnswer = Int.random(in: 0...2)
+        // Return the booleans to false
+         besidesTheCorrect = false
+         besidesTheWrong = false
+         countries = countries.shuffled()
+         correctAnswer = Int.random(in: 0...3)
     }
     
     func reset() {
